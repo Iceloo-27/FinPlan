@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.time.YearMonth;
 
 @Service
 public class BalanceService {
@@ -19,8 +20,18 @@ public class BalanceService {
     }
 
     public BalanceResponse getBalance() {
-        List<Transaction> transactions = transactionRepository.findAll();
+        return calculateBalance(transactionRepository.findAll());
+    }
 
+    public BalanceResponse getMonthlyBalance(int year, int month) {
+        YearMonth yearMonth = YearMonth.of(year, month);
+
+        List<Transaction> transactions = transactionRepository.findByTransactionDateBetween(yearMonth.atDay(1), yearMonth.atEndOfMonth());
+
+        return calculateBalance(transactions);
+    }
+
+    private BalanceResponse calculateBalance(List<Transaction> transactions) {
         BigDecimal totalIncome = BigDecimal.ZERO;
         BigDecimal totalExpense = BigDecimal.ZERO;
 

@@ -124,3 +124,16 @@ Content-Type: application/json
   "transactionDate": "2026-09-27",
   "categoryId": 2
 }
+
+### Общий баланс
+GET http://localhost:8080/api/balance
+
+### Сентябрь 2026
+GET http://localhost:8080/api/balance/monthly?year=2026&month=9
+
+### Август 2026
+GET http://localhost:8080/api/balance/monthly?year=2026&month=8
+
+###
+
+GET http://localhost:8080/api/balance/monthly?year=2026&month=13
