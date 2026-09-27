@@ -2,6 +2,7 @@ package dev.iceloo.finplan.controller;
 
 import dev.iceloo.finplan.dto.CreateTransactionRequest;
 import dev.iceloo.finplan.dto.TransactionResponse;
+import dev.iceloo.finplan.entity.TransactionType;
 import dev.iceloo.finplan.service.TransactionService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -58,9 +59,9 @@ public class TransactionController {
     }
 
     @GetMapping("/monthly")
-    public List<TransactionResponse> findByMonth(@RequestParam int year, @RequestParam int month) {
+    public List<TransactionResponse> findByMonth(@RequestParam int year, @RequestParam int month, @RequestParam(required = false) TransactionType type) {
         try {
-            return transactionService.findByMonth(year, month).stream().map(TransactionResponse::from).toList();
+            return transactionService.findByMonth(year, month, type).stream().map(TransactionResponse::from).toList();
         } catch (DateTimeException exception) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid year or month");
         }

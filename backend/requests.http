@@ -1,11 +1,8 @@
-### Все операции
-GET http://localhost:8080/api/transactions
-
-### Операции за сентябрь
+### Все операции за сентябрь
 GET http://localhost:8080/api/transactions/monthly?year=2026&month=9
 
-### Месячный баланс
-GET http://localhost:8080/api/balance/monthly?year=2026&month=9
+### Только расходы
+GET http://localhost:8080/api/transactions/monthly?year=2026&month=9&type=EXPENSE
 
-### Расходы по категориям
-GET http://localhost:8080/api/analytics/expenses-by-category?year=2026&month=9
+### Только доходы
+GET http://localhost:8080/api/transactions/monthly?year=2026&month=9&type=INCOME

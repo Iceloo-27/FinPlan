@@ -37,10 +37,14 @@ public class TransactionService {
         return transactionRepository.findAll(NEWEST_FIRST);
     }
 
-    public List<Transaction> findByMonth(int year, int month) {
+    public List<Transaction> findByMonth(int year, int month, TransactionType type) {
         YearMonth yearMonth = YearMonth.of(year, month);
 
-        return transactionRepository.findByTransactionDateBetween(yearMonth.atDay(1), yearMonth.atEndOfMonth(), NEWEST_FIRST);
+        if (type == null) {
+            return transactionRepository.findByTransactionDateBetween(yearMonth.atDay(1), yearMonth.atEndOfMonth(), NEWEST_FIRST);
+        }
+
+        return transactionRepository.findByTransactionDateBetweenAndType(yearMonth.atDay(1), yearMonth.atEndOfMonth(), type, NEWEST_FIRST);
     }
 
     public Transaction findById(Long id) {
