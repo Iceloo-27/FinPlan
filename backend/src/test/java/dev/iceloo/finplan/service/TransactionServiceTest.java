@@ -129,4 +129,50 @@ class TransactionServiceTest {
 
         assertEquals(List.of(), result);
     }
+
+    @Test
+    void updateRejectsCatWithDifTypeWithoutChangingTrans() {
+        TransactionRepository transactionRepository = mock(TransactionRepository.class);
+
+        CategoryRepository categoryRepository = mock(CategoryRepository.class);
+
+        TransactionService service = new TransactionService(transactionRepository, categoryRepository);
+
+        Transaction existingTransaction = new Transaction(new BigDecimal("500.00"), TransactionType.EXPENSE, "Продукты", LocalDate.of(2026, 9, 27));
+
+        Category salaryCategory = new Category("Зарплата", TransactionType.INCOME);
+
+        when(transactionRepository.findById(10L)).thenReturn(Optional.of(existingTransaction));
+
+        when(categoryRepository.findById(2L)).thenReturn(Optional.of(salaryCategory));
+
+        CreateTransactionRequest request = new CreateTransactionRequest(new BigDecimal("1000.00"), TransactionType.EXPENSE, "Изменённое описание", LocalDate.of(2026, 9, 28), 2L);
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> service.update(10L, request));
+
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+
+        assertEquals(new BigDecimal("500.00"), existingTransaction.getAmount());
+        assertEquals("Продукты", existingTransaction.getDescription());
+        assertEquals(LocalDate.of(2026, 9, 27), existingTransaction.getTransactionDate());
+
+        verify(transactionRepository, never()).save(any());
+    }
+
+    @Test
+    void deleteRemovesExistingTransaction() {
+        TransactionRepository transactionRepository = mock(TransactionRepository.class);
+
+        CategoryRepository categoryRepository = mock(CategoryRepository.class);
+
+        TransactionService service = new TransactionService(transactionRepository, categoryRepository);
+
+        Transaction transaction = new Transaction(new BigDecimal("500.00"), TransactionType.EXPENSE, "Продукты", LocalDate.of(2026, 9, 27));
+
+        when(transactionRepository.findById(10L)).thenReturn(Optional.of(transaction));
+
+        service.delete(10L);
+
+        verify(transactionRepository).delete(transaction);
+    }
 }
