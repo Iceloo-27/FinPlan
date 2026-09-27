@@ -56,11 +56,7 @@ public class TransactionService {
             return null;
         }
 
-        return categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Category not found"
-                ));
+        return categoryRepository.findById(categoryId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
     }
 
     @Transactional
