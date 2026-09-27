@@ -137,3 +137,12 @@ GET http://localhost:8080/api/balance/monthly?year=2026&month=8
 ###
 
 GET http://localhost:8080/api/balance/monthly?year=2026&month=13
+
+### Расходы по категориям за сентябрь
+GET http://localhost:8080/api/analytics/expenses-by-category?year=2026&month=9
+
+### Месяц без операций
+GET http://localhost:8080/api/analytics/expenses-by-category?year=2026&month=8
+
+### Некорректный месяц
+GET http://localhost:8080/api/analytics/expenses-by-category?year=2026&month=13
