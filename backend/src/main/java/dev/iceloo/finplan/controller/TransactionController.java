@@ -59,9 +59,9 @@ public class TransactionController {
     }
 
     @GetMapping("/monthly")
-    public List<TransactionResponse> findByMonth(@RequestParam int year, @RequestParam int month, @RequestParam(required = false) TransactionType type) {
+    public List<TransactionResponse> findByMonth(@RequestParam int year, @RequestParam int month, @RequestParam(required = false) TransactionType type, @RequestParam(required = false) Long categoryId) {
         try {
-            return transactionService.findByMonth(year, month, type).stream().map(TransactionResponse::from).toList();
+            return transactionService.findByMonth(year, month, type, categoryId).stream().map(TransactionResponse::from).toList();
         } catch (DateTimeException exception) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid year or month");
         }
