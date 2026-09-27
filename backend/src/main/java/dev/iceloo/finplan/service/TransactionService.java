@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.data.domain.Sort;
 
 import java.util.List;
 import java.time.YearMonth;
@@ -33,7 +34,13 @@ public class TransactionService {
     }
 
     public List<Transaction> findAll() {
-        return transactionRepository.findAll();
+        return transactionRepository.findAll(NEWEST_FIRST);
+    }
+
+    public List<Transaction> findByMonth(int year, int month) {
+        YearMonth yearMonth = YearMonth.of(year, month);
+
+        return transactionRepository.findByTransactionDateBetween(yearMonth.atDay(1), yearMonth.atEndOfMonth(), NEWEST_FIRST);
     }
 
     public Transaction findById(Long id) {
@@ -76,9 +83,5 @@ public class TransactionService {
         return category;
     }
 
-    public List<Transaction> findByMonth(int year, int month) {
-        YearMonth yearMonth = YearMonth.of(year, month);
-
-        return transactionRepository.findByTransactionDateBetween(yearMonth.atDay(1), yearMonth.atEndOfMonth());
-    }
+    private static final Sort NEWEST_FIRST = Sort.by(Sort.Order.desc("transactionDate"), Sort.Order.desc("id"));
 }

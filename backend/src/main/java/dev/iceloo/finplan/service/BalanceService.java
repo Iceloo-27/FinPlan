@@ -4,6 +4,7 @@ import dev.iceloo.finplan.dto.BalanceResponse;
 import dev.iceloo.finplan.entity.Transaction;
 import dev.iceloo.finplan.entity.TransactionType;
 import dev.iceloo.finplan.repository.TransactionRepository;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -26,7 +27,7 @@ public class BalanceService {
     public BalanceResponse getMonthlyBalance(int year, int month) {
         YearMonth yearMonth = YearMonth.of(year, month);
 
-        List<Transaction> transactions = transactionRepository.findByTransactionDateBetween(yearMonth.atDay(1), yearMonth.atEndOfMonth());
+        List<Transaction> transactions = transactionRepository.findByTransactionDateBetween(yearMonth.atDay(1), yearMonth.atEndOfMonth(), Sort.unsorted());
 
         return calculateBalance(transactions);
     }

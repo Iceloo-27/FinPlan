@@ -5,6 +5,7 @@ import dev.iceloo.finplan.entity.Category;
 import dev.iceloo.finplan.entity.Transaction;
 import dev.iceloo.finplan.entity.TransactionType;
 import dev.iceloo.finplan.repository.TransactionRepository;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,7 +28,7 @@ public class CategoryAnalyticsService {
     public List<CategoryExpenseResponse> getMonthlyExpenses(int year, int month) {
         YearMonth yearMonth = YearMonth.of(year, month);
 
-        List<Transaction> transactions = transactionRepository.findByTransactionDateBetween(yearMonth.atDay(1), yearMonth.atEndOfMonth());
+        List<Transaction> transactions = transactionRepository.findByTransactionDateBetween(yearMonth.atDay(1), yearMonth.atEndOfMonth(), Sort.unsorted());
 
         Map<Long, CategoryExpenseResponse> expensesByCategory = new LinkedHashMap<>();
 
