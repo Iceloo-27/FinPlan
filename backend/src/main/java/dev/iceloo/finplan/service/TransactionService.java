@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.time.YearMonth;
 
 @Service
 public class TransactionService {
@@ -73,5 +74,11 @@ public class TransactionService {
         }
 
         return category;
+    }
+
+    public List<Transaction> findByMonth(int year, int month) {
+        YearMonth yearMonth = YearMonth.of(year, month);
+
+        return transactionRepository.findByTransactionDateBetween(yearMonth.atDay(1), yearMonth.atEndOfMonth());
     }
 }
