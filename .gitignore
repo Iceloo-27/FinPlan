@@ -1,0 +1,28 @@
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Maven build output
+**/target/
+
+# Gradle build output
+**/build/
+
+# Frontend dependencies
+**/node_modules/
+**/dist/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Windows
+Thumbs.db
+Desktop.ini
