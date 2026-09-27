@@ -30,6 +30,14 @@ function App() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [transactionsError, setTransactionsError] = useState('')
   const [categories, setCategories] = useState<Category[]>([])
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [operationType, setOperationType] = useState<'INCOME' | 'EXPENSE'>('EXPENSE')
+  const [amount, setAmount] = useState('')
+  const [categoryId, setCategoryId] = useState('')
+  const [description, setDescription] = useState('')
+  const [transactionDate, setTransactionDate] = useState(new Date().toLocaleDateString('en-CA'))
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   useEffect(() => {
     fetch('/api/balance').then(response => {
@@ -61,6 +69,66 @@ function App() {
         }).then((data: Category[]) => setCategories(data)).catch(error => console.error(error))
   }, [])
 
+    async function handleSaveOperation() {
+        const parsedAmount = Number(amount)
+
+        if (!Number.isFinite(parsedAmount) || parsedAmount < 0.01) {
+            setSaveError('Введите сумму не меньше 0,01')
+            return
+        }
+
+        if (!transactionDate) {
+            setSaveError('Выберите дату')
+            return
+        }
+
+        setIsSaving(true)
+        setSaveError('')
+
+        try {
+            const response = await fetch('/api/transactions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    amount: parsedAmount,
+                    type: operationType,
+                    description: description.trim() || null,
+                    transactionDate,
+                    categoryId: categoryId ? Number(categoryId) : null,
+                }),
+            })
+
+            if (!response.ok) {
+                throw new Error('Не удалось сохранить операцию')
+            }
+
+            const [balanceResponse, transactionsResponse] = await Promise.all([
+                fetch('/api/balance'),
+                fetch('/api/transactions'),
+            ])
+
+            if (!balanceResponse.ok || !transactionsResponse.ok) {
+                throw new Error('Операция сохранена, но не удалось обновить данные')
+            }
+
+            setBalance(await balanceResponse.json())
+            setTransactions(await transactionsResponse.json())
+
+            setAmount('')
+            setCategoryId('')
+            setDescription('')
+            setIsModalOpen(false)
+        } catch (error) {
+            setSaveError(
+                error instanceof Error ? error.message : 'Произошла ошибка'
+            )
+        } finally {
+            setIsSaving(false)
+        }
+    }
+
   return (
       <div className="app">
         <header className="header">
@@ -78,7 +146,7 @@ function App() {
                 Все доходы и расходы в одном месте
               </p>
             </div>
-            <button className="add-button">+ Новая операция</button>
+              <button className="add-button" onClick={() => setIsModalOpen(true)}>+ Новая операция</button>
           </div>
 
           <section className="balance-card">
@@ -146,6 +214,115 @@ function App() {
             ))}
           </section>
         </main>
+          {isModalOpen && (
+              <div className="modal-backdrop" onClick={() => setIsModalOpen(false)}>
+                  <div
+                      className="modal"
+                      role="dialog"
+                      aria-modal="true"
+                      aria-labelledby="modal-title"
+                      onClick={event => event.stopPropagation()}
+                  >
+                      <div className="modal-heading">
+                          <h2 id="modal-title">Новая операция</h2>
+                          <button
+                              className="close-button"
+                              type="button"
+                              aria-label="Закрыть окно"
+                              onClick={() => setIsModalOpen(false)}
+                          >
+                              ×
+                          </button>
+                      </div>
+
+                      <div className="operation-form">
+                          <div className="type-switch">
+                              <button
+                                  type="button"
+                                  className={operationType === 'EXPENSE' ? 'type-button active' : 'type-button'}
+                                  onClick={() => {
+                                      setOperationType('EXPENSE')
+                                      setCategoryId('')
+                                  }}
+                              >
+                                  Расход
+                              </button>
+
+                              <button
+                                  type="button"
+                                  className={operationType === 'INCOME' ? 'type-button active' : 'type-button'}
+                                  onClick={() => {
+                                      setOperationType('INCOME')
+                                      setCategoryId('')
+                                  }}
+                              >
+                                  Доход
+                              </button>
+                          </div>
+
+                          <label className="form-field">
+                              Сумма
+                              <input
+                                  type="number"
+                                  min="0.01"
+                                  step="0.01"
+                                  placeholder="0.00"
+                                  value={amount}
+                                  onChange={event => setAmount(event.target.value)}
+                              />
+                          </label>
+
+                          <label className="form-field">
+                              Категория
+                              <select
+                                  value={categoryId}
+                                  onChange={event => setCategoryId(event.target.value)}
+                              >
+                                  <option value="">Без категории</option>
+                                  {categories
+                                      .filter(category => category.type === operationType)
+                                      .map(category => (
+                                          <option key={category.id} value={category.id}>
+                                              {category.name}
+                                          </option>
+                                      ))}
+                              </select>
+                          </label>
+
+                          <label className="form-field">
+                              Описание
+                              <input
+                                  type="text"
+                                  maxLength={255}
+                                  placeholder="Например, покупка продуктов"
+                                  value={description}
+                                  onChange={event => setDescription(event.target.value)}
+                              />
+                          </label>
+
+                          <label className="form-field">
+                              Дата
+                              <input
+                                  type="date"
+                                  value={transactionDate}
+                                  onChange={event => setTransactionDate(event.target.value)}
+                              />
+                          </label>
+
+                          {saveError && <p className="expense">{saveError}</p>}
+
+                          <button
+                              className="save-button"
+                              type="button"
+                              disabled={isSaving}
+                              onClick={handleSaveOperation}
+                          >
+                              {isSaving ? 'Сохраняем...' : 'Сохранить операцию'}
+                          </button>
+                      </div>
+                  </div>
+              </div>
+          )}
       </div>
   )
 }
