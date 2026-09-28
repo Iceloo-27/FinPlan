@@ -303,3 +303,67 @@ h1 {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.transaction-actions {
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.delete-button {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #9aaaa0;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.delete-button:hover {
+  color: #d05d52;
+}
+
+.delete-modal {
+  max-width: 440px;
+}
+
+.delete-message {
+  margin: 20px 0 28px;
+  color: #65766d;
+  line-height: 1.6;
+}
+
+.delete-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.cancel-button,
+.confirm-delete-button {
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cancel-button {
+  border: 1px solid #dfe6e1;
+  background: white;
+  color: #52635a;
+}
+
+.cancel-button:hover {
+  background: #f5f7f6;
+}
+
+.confirm-delete-button {
+  border: none;
+  background: #d05d52;
+  color: white;
+}
+
+.confirm-delete-button:hover {
+  background: #b94d44;
+}

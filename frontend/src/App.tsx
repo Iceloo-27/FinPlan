@@ -38,6 +38,7 @@ function App() {
   const [transactionDate, setTransactionDate] = useState(new Date().toLocaleDateString('en-CA'))
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null)
 
   useEffect(() => {
     fetch('/api/balance').then(response => {
@@ -129,6 +130,33 @@ function App() {
         }
     }
 
+    async function handleDeleteTransaction(transaction: Transaction) {
+        try {
+            const response = await fetch(`/api/transactions/${transaction.id}`, {
+                method: 'DELETE',
+            })
+
+            if (!response.ok) {
+                throw new Error('Не удалось удалить операцию')
+            }
+
+            const [balanceResponse, transactionsResponse] = await Promise.all([
+                fetch('/api/balance'),
+                fetch('/api/transactions'),
+            ])
+
+            if (!balanceResponse.ok || !transactionsResponse.ok) {
+                throw new Error('Операция удалена, но не удалось обновить данные')
+            }
+
+            setBalance(await balanceResponse.json())
+            setTransactions(await transactionsResponse.json())
+            setTransactionToDelete(null)
+        } catch (error) {
+            alert(error instanceof Error ? error.message : 'Произошла ошибка при удалении')
+        }
+    }
+
   return (
       <div className="app">
         <header className="header">
@@ -202,14 +230,24 @@ function App() {
                     </p>
                   </div>
 
-                  <strong
-                      className={
-                        transaction.type === 'INCOME' ? 'income' : 'expense'
-                      }
-                  >
-                    {transaction.type === 'INCOME' ? '+' : '−'}
-                    {formatMoney(transaction.amount)}
-                  </strong>
+                    <div className="transaction-actions">
+                        <strong
+                            className={
+                                transaction.type === 'INCOME' ? 'income' : 'expense'
+                            }
+                        >
+                            {transaction.type === 'INCOME' ? '+' : '−'}
+                            {formatMoney(transaction.amount)}
+                        </strong>
+
+                        <button
+                            type="button"
+                            className="delete-button"
+                            onClick={() => setTransactionToDelete(transaction)}
+                        >
+                            Удалить
+                        </button>
+                    </div>
                 </div>
             ))}
           </section>
@@ -318,6 +356,66 @@ function App() {
                               onClick={handleSaveOperation}
                           >
                               {isSaving ? 'Сохраняем...' : 'Сохранить операцию'}
+                          </button>
+                      </div>
+                  </div>
+              </div>
+          )}
+          {transactionToDelete && (
+              <div
+                  className="modal-backdrop"
+                  onClick={() => setTransactionToDelete(null)}
+              >
+                  <div
+                      className="modal delete-modal"
+                      role="dialog"
+                      aria-modal="true"
+                      aria-labelledby="delete-modal-title"
+                      onClick={event => event.stopPropagation()}
+                  >
+                      <div className="modal-heading">
+                          <h2 id="delete-modal-title">Удалить операцию?</h2>
+
+                          <button
+                              className="close-button"
+                              type="button"
+                              aria-label="Закрыть окно"
+                              onClick={() => setTransactionToDelete(null)}
+                          >
+                              ×
+                          </button>
+                      </div>
+
+                      <p className="delete-message">
+                          Вы действительно хотите удалить{' '}
+                          {transactionToDelete.type === 'INCOME' ? 'доход' : 'расход'} на{' '}
+                          <strong
+                              className={
+                                  transactionToDelete.type === 'INCOME'
+                                      ? 'income'
+                                      : 'expense'
+                              }
+                          >
+                              {formatMoney(transactionToDelete.amount)}
+                          </strong>
+                          ?
+                      </p>
+
+                      <div className="delete-modal-actions">
+                          <button
+                              type="button"
+                              className="cancel-button"
+                              onClick={() => setTransactionToDelete(null)}
+                          >
+                              Отмена
+                          </button>
+
+                          <button
+                              type="button"
+                              className="confirm-delete-button"
+                              onClick={() => handleDeleteTransaction(transactionToDelete)}
+                          >
+                              Удалить
                           </button>
                       </div>
                   </div>
