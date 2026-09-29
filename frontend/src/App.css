@@ -380,3 +380,115 @@ h1 {
 .edit-button:hover {
   color: #267653;
 }
+
+.month-filter {
+  padding: 10px 14px;
+  border: 1px solid #dfe6e1;
+  border-radius: 10px;
+  background: white;
+  color: #20332b;
+  font: inherit;
+  cursor: pointer;
+}
+
+.month-filter:focus {
+  outline: none;
+  border-color: #438d68;
+}
+
+.transaction-filters {
+  display: flex;
+  gap: 8px;
+  margin: 20px 0;
+}
+
+.filter-button {
+  padding: 9px 16px;
+  border: 1px solid #dfe6e1;
+  border-radius: 10px;
+  background: white;
+  color: #65766d;
+  font: inherit;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.filter-button:hover {
+  border-color: #a9c7b6;
+  color: #438d68;
+}
+
+.filter-button.active {
+  border-color: #438d68;
+  background: #edf6f1;
+  color: #267653;
+  font-weight: 700;
+}
+
+.period-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.period-button {
+  padding: 10px 14px;
+  border: 1px solid #dfe6e1;
+  border-radius: 10px;
+  background: white;
+  color: #65766d;
+  font: inherit;
+  cursor: pointer;
+}
+
+.period-button.active {
+  border-color: #438d68;
+  background: #edf6f1;
+  color: #267653;
+  font-weight: 700;
+}
+
+.month-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 18px 0;
+}
+
+.month-arrow {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #dfe6e1;
+  border-radius: 10px;
+  background: white;
+  color: #438d68;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.month-arrow:hover {
+  background: #edf6f1;
+  border-color: #a9c7b6;
+}
+
+.month-label {
+  min-width: 150px;
+  text-align: center;
+  color: #20332b;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.month-navigation.hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.transactions-list {
+  height: 500px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}

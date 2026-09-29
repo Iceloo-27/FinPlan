@@ -49,6 +49,38 @@ function App() {
   const [saveError, setSaveError] = useState('')
   const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null)
   const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null)
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toLocaleDateString('en-CA').slice(0, 7))
+  const [selectedType, setSelectedType] = useState<'ALL' | 'INCOME' | 'EXPENSE'>('ALL')
+  const [periodMode, setPeriodMode] = useState<'ALL_TIME' | 'MONTH'>('MONTH')
+
+    async function loadTransactions() {
+        let url = '/api/transactions'
+
+        if (periodMode === 'MONTH') {
+            const [year, month] = selectedMonth.split('-')
+
+            url = `/api/transactions/monthly?year=${year}&month=${Number(month)}`
+
+            if (selectedType !== 'ALL') {
+                url += `&type=${selectedType}`
+            }
+        }
+
+        const response = await fetch(url)
+
+        if (!response.ok) {
+            throw new Error('Не удалось загрузить операции')
+        }
+
+        let data: Transaction[] = await response.json()
+
+        if (periodMode === 'ALL_TIME' && selectedType !== 'ALL') {
+            data = data.filter(transaction => transaction.type === selectedType)
+        }
+
+        setTransactions(data)
+        setTransactionsError('')
+    }
 
   useEffect(() => {
     fetch('/api/balance').then(response => {
@@ -60,15 +92,34 @@ function App() {
         }).then((data: Balance) => setBalance(data)).catch(() => setError('Не удалось подключиться к backend'))
   }, [])
 
-  useEffect(() => {
-    fetch('/api/transactions').then(response => {
-          if (!response.ok) {
-            throw new Error('Не удалось загрузить операции')
-          }
+    useEffect(() => {
+        let url = '/api/transactions'
 
-          return response.json()
-        }).then((data: Transaction[]) => setTransactions(data)).catch(() => setTransactionsError('Не удалось загрузить операции'))
-  }, [])
+        if (periodMode === 'MONTH') {
+            const [year, month] = selectedMonth.split('-')
+
+            url = `/api/transactions/monthly?year=${year}&month=${Number(month)}`
+
+            if (selectedType !== 'ALL') {
+                url += `&type=${selectedType}`
+            }
+        }
+
+        fetch(url).then(response => {
+                if (!response.ok) {
+                    throw new Error('Не удалось загрузить операции')
+                }
+
+                return response.json()
+            }).then((data: Transaction[]) => {
+                const filteredData = periodMode === 'ALL_TIME' && selectedType !== 'ALL' ? data.filter(transaction => transaction.type === selectedType) : data
+
+                setTransactions(filteredData)
+                setTransactionsError('')
+            }).catch(() => {
+                setTransactionsError('Не удалось загрузить операции')
+            })
+    }, [selectedMonth, selectedType, periodMode])
 
   useEffect(() => {
     fetch('/api/categories').then(response => {
@@ -165,17 +216,14 @@ function App() {
                 throw new Error('Не удалось сохранить операцию')
             }
 
-            const [balanceResponse, transactionsResponse] = await Promise.all([
-                fetch('/api/balance'),
-                fetch('/api/transactions'),
-            ])
+            const balanceResponse = await fetch('/api/balance')
 
-            if (!balanceResponse.ok || !transactionsResponse.ok) {
-                throw new Error('Операция сохранена, но не удалось обновить данные')
+            if (!balanceResponse.ok) {
+                throw new Error('Операция сохранена, но не удалось обновить баланс')
             }
 
             setBalance(await balanceResponse.json())
-            setTransactions(await transactionsResponse.json())
+            await loadTransactions()
 
             setAmount('')
             setCategoryId('')
@@ -201,21 +249,31 @@ function App() {
                 throw new Error('Не удалось удалить операцию')
             }
 
-            const [balanceResponse, transactionsResponse] = await Promise.all([
-                fetch('/api/balance'),
-                fetch('/api/transactions'),
-            ])
+            const balanceResponse = await fetch('/api/balance')
 
-            if (!balanceResponse.ok || !transactionsResponse.ok) {
-                throw new Error('Операция удалена, но не удалось обновить данные')
+            if (!balanceResponse.ok) {
+                throw new Error('Операция удалена, но не удалось обновить баланс')
             }
 
             setBalance(await balanceResponse.json())
-            setTransactions(await transactionsResponse.json())
+            await loadTransactions()
             setTransactionToDelete(null)
         } catch (error) {
             alert(error instanceof Error ? error.message : 'Произошла ошибка при удалении')
         }
+    }
+
+    const selectedMonthLabel = new Intl.DateTimeFormat('ru-RU', {month: 'long', year: 'numeric',}).format(new Date(`${selectedMonth}-01T00:00:00`)).replace(' г.', '')
+
+    function changeMonth(offset: number) {
+        const [year, month] = selectedMonth.split('-').map(Number)
+
+        const date = new Date(year, month - 1 + offset, 1)
+
+        const nextYear = date.getFullYear()
+        const nextMonth = String(date.getMonth() + 1).padStart(2, '0')
+
+        setSelectedMonth(`${nextYear}-${nextMonth}`)
     }
 
   return (
@@ -262,65 +320,142 @@ function App() {
             </div>
           </section>
 
-          <section className="transactions">
-            <div className="section-heading">
-              <h2>Последние операции</h2>
-              <span>Все операции</span>
-            </div>
+            <section className="transactions">
+              <div className="section-heading">
+                  <h2>Операции</h2>
 
-            {transactionsError && (
-                <p className="expense">{transactionsError}</p>
-            )}
+                  <div className="period-filter">
+                      <button
+                          type="button"
+                          className={
+                              periodMode === 'ALL_TIME'
+                                  ? 'period-button active'
+                                  : 'period-button'
+                          }
+                          onClick={() => setPeriodMode('ALL_TIME')}
+                      >
+                          Всё время
+                      </button>
 
-            {!transactionsError && transactions.length === 0 && (
-                <p>Операций пока нет</p>
-            )}
+                      <button
+                          type="button"
+                          className={
+                              periodMode === 'MONTH'
+                                  ? 'period-button active'
+                                  : 'period-button'
+                          }
+                          onClick={() => setPeriodMode('MONTH')}
+                      >
+                          Месяц
+                      </button>
+                  </div>
+                  <div
+                      className={periodMode === 'MONTH' ? 'month-navigation' : 'month-navigation hidden'}
+                  >
+                      <button
+                          type="button"
+                          className="month-arrow"
+                          onClick={() => changeMonth(-1)}
+                          aria-label="Предыдущий месяц"
+                      >
+                          ‹
+                      </button>
 
-            {transactions.map(transaction => (
-                <div className="transaction-row" key={transaction.id}>
-                  <div>
-                    <strong>
-                      {categories.find(category => category.id === transaction.categoryId)?.name
-                          ?? 'Без категории'}
-                    </strong>
-                    <p>{transaction.description || 'Без описания'}</p>
-                    <p>
-                      {new Date(
-                          transaction.transactionDate + 'T00:00:00'
-                      ).toLocaleDateString('ru-RU')}
-                      {' · '}
-                      {transaction.type === 'INCOME' ? 'Доход' : 'Расход'}
-                    </p>
+                      <span className="month-label">
+                          {selectedMonthLabel}
+                      </span>
+
+                      <button
+                          type="button"
+                          className="month-arrow"
+                          onClick={() => changeMonth(1)}
+                          aria-label="Следующий месяц"
+                      >
+                          ›
+                      </button>
                   </div>
 
-                    <div className="transaction-actions">
-                        <strong
-                            className={
-                                transaction.type === 'INCOME' ? 'income' : 'expense'
-                            }
-                        >
-                            {transaction.type === 'INCOME' ? '+' : '−'}
-                            {formatMoney(transaction.amount)}
+              </div>
+              <div className="transaction-filters">
+                  <button
+                      type="button"
+                      className={selectedType === 'ALL' ? 'filter-button active' : 'filter-button'}
+                      onClick={() => setSelectedType('ALL')}
+                  >
+                      Все
+                  </button>
+
+                  <button
+                      type="button"
+                      className={selectedType === 'INCOME' ? 'filter-button active' : 'filter-button'}
+                      onClick={() => setSelectedType('INCOME')}
+                  >
+                      Доходы
+                  </button>
+
+                  <button
+                      type="button"
+                      className={selectedType === 'EXPENSE' ? 'filter-button active' : 'filter-button'}
+                      onClick={() => setSelectedType('EXPENSE')}
+                  >
+                      Расходы
+                  </button>
+              </div>
+            <div className="transactions-list">
+                {transactionsError && (
+                    <p className="expense">{transactionsError}</p>
+                )}
+
+                {!transactionsError && transactions.length === 0 && (
+                    <p>Операций пока нет</p>
+                )}
+
+                {transactions.map(transaction => (
+                    <div className="transaction-row" key={transaction.id}>
+                      <div>
+                        <strong>
+                          {categories.find(category => category.id === transaction.categoryId)?.name
+                              ?? 'Без категории'}
                         </strong>
+                        <p>{transaction.description || 'Без описания'}</p>
+                        <p>
+                          {new Date(
+                              transaction.transactionDate + 'T00:00:00'
+                          ).toLocaleDateString('ru-RU')}
+                          {' · '}
+                          {transaction.type === 'INCOME' ? 'Доход' : 'Расход'}
+                        </p>
+                      </div>
 
-                        <button
-                            type="button"
-                            className="edit-button"
-                            onClick={() => openEditModal(transaction)}
-                        >
-                            Изменить
-                        </button>
+                        <div className="transaction-actions">
+                            <strong
+                                className={
+                                    transaction.type === 'INCOME' ? 'income' : 'expense'
+                                }
+                            >
+                                {transaction.type === 'INCOME' ? '+' : '−'}
+                                {formatMoney(transaction.amount)}
+                            </strong>
 
-                        <button
-                            type="button"
-                            className="delete-button"
-                            onClick={() => setTransactionToDelete(transaction)}
-                        >
-                            Удалить
-                        </button>
-                    </div>
+                            <button
+                                type="button"
+                                className="edit-button"
+                                onClick={() => openEditModal(transaction)}
+                            >
+                                Изменить
+                            </button>
+
+                            <button
+                                type="button"
+                                className="delete-button"
+                                onClick={() => setTransactionToDelete(transaction)}
+                            >
+                                Удалить
+                            </button>
+                        </div>
                 </div>
             ))}
+            </div>
           </section>
         </main>
           {isModalOpen && (
