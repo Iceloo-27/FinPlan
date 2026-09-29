@@ -22,6 +22,13 @@ type Category = {
   type: 'INCOME' | 'EXPENSE'
 }
 
+type OperationDraft = {
+    amount: string
+    categoryId: string
+    description: string
+    transactionDate: string
+}
+
 const formatMoney = (amount: number) => new Intl.NumberFormat('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2,}).format(amount) + ' ₽'
 
 function App() {
@@ -34,11 +41,14 @@ function App() {
   const [operationType, setOperationType] = useState<'INCOME' | 'EXPENSE'>('EXPENSE')
   const [amount, setAmount] = useState('')
   const [categoryId, setCategoryId] = useState('')
+  const [expenseDraft, setExpenseDraft] = useState<OperationDraft | null>(null)
+  const [incomeDraft, setIncomeDraft] = useState<OperationDraft | null>(null)
   const [description, setDescription] = useState('')
   const [transactionDate, setTransactionDate] = useState(new Date().toLocaleDateString('en-CA'))
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null)
+  const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null)
 
   useEffect(() => {
     fetch('/api/balance').then(response => {
@@ -70,6 +80,55 @@ function App() {
         }).then((data: Category[]) => setCategories(data)).catch(error => console.error(error))
   }, [])
 
+    function getCurrentDraft(): OperationDraft {
+        return {amount, categoryId, description, transactionDate,}
+    }
+
+    function applyDraft(draft: OperationDraft | null) {
+        setAmount(draft?.amount ?? '')
+        setCategoryId(draft?.categoryId ?? '')
+        setDescription(draft?.description ?? '')
+        setTransactionDate(draft?.transactionDate ?? new Date().toLocaleDateString('en-CA'))
+    }
+
+    function openCreateModal() {
+        setTransactionToEdit(null)
+        setOperationType('EXPENSE')
+        setAmount('')
+        setCategoryId('')
+        setExpenseDraft(null)
+        setIncomeDraft(null)
+        setDescription('')
+        setTransactionDate(new Date().toLocaleDateString('en-CA'))
+        setSaveError('')
+        setIsModalOpen(true)
+    }
+
+    function openEditModal(transaction: Transaction) {
+        setTransactionToEdit(transaction)
+
+        const draft: OperationDraft = {
+            amount: String(transaction.amount),
+            categoryId: transaction.categoryId !== null ? String(transaction.categoryId) : '',
+            description: transaction.description ?? '',
+            transactionDate: transaction.transactionDate,
+        }
+
+        setOperationType(transaction.type)
+        applyDraft(draft)
+
+        if (transaction.type === 'EXPENSE') {
+            setExpenseDraft(draft)
+            setIncomeDraft(null)
+        } else {
+            setIncomeDraft(draft)
+            setExpenseDraft(null)
+        }
+
+        setSaveError('')
+        setIsModalOpen(true)
+    }
+
     async function handleSaveOperation() {
         const parsedAmount = Number(amount)
 
@@ -87,8 +146,9 @@ function App() {
         setSaveError('')
 
         try {
-            const response = await fetch('/api/transactions', {
-                method: 'POST',
+            const response = await fetch(transactionToEdit ? `/api/transactions/${transactionToEdit.id}` : '/api/transactions',
+                {
+                    method: transactionToEdit ? 'PUT' : 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -120,6 +180,7 @@ function App() {
             setAmount('')
             setCategoryId('')
             setDescription('')
+            setTransactionToEdit(null)
             setIsModalOpen(false)
         } catch (error) {
             setSaveError(
@@ -174,7 +235,9 @@ function App() {
                 Все доходы и расходы в одном месте
               </p>
             </div>
-              <button className="add-button" onClick={() => setIsModalOpen(true)}>+ Новая операция</button>
+              <button className="add-button" onClick={openCreateModal}>
+                  + Новая операция
+              </button>
           </div>
 
           <section className="balance-card">
@@ -242,6 +305,14 @@ function App() {
 
                         <button
                             type="button"
+                            className="edit-button"
+                            onClick={() => openEditModal(transaction)}
+                        >
+                            Изменить
+                        </button>
+
+                        <button
+                            type="button"
                             className="delete-button"
                             onClick={() => setTransactionToDelete(transaction)}
                         >
@@ -262,7 +333,9 @@ function App() {
                       onClick={event => event.stopPropagation()}
                   >
                       <div className="modal-heading">
-                          <h2 id="modal-title">Новая операция</h2>
+                          <h2 id="modal-title">
+                              {transactionToEdit ? 'Редактировать операцию' : 'Новая операция'}
+                          </h2>
                           <button
                               className="close-button"
                               type="button"
@@ -279,8 +352,13 @@ function App() {
                                   type="button"
                                   className={operationType === 'EXPENSE' ? 'type-button active' : 'type-button'}
                                   onClick={() => {
+                                      if (operationType === 'EXPENSE') {
+                                          return
+                                      }
+
+                                      setIncomeDraft(getCurrentDraft())
                                       setOperationType('EXPENSE')
-                                      setCategoryId('')
+                                      applyDraft(expenseDraft)
                                   }}
                               >
                                   Расход
@@ -290,8 +368,13 @@ function App() {
                                   type="button"
                                   className={operationType === 'INCOME' ? 'type-button active' : 'type-button'}
                                   onClick={() => {
+                                      if (operationType === 'INCOME') {
+                                          return
+                                      }
+
+                                      setExpenseDraft(getCurrentDraft())
                                       setOperationType('INCOME')
-                                      setCategoryId('')
+                                      applyDraft(incomeDraft)
                                   }}
                               >
                                   Доход
@@ -355,7 +438,7 @@ function App() {
                               disabled={isSaving}
                               onClick={handleSaveOperation}
                           >
-                              {isSaving ? 'Сохраняем...' : 'Сохранить операцию'}
+                              {isSaving ? 'Сохраняем...' : transactionToEdit ? 'Сохранить изменения' : 'Сохранить операцию'}
                           </button>
                       </div>
                   </div>

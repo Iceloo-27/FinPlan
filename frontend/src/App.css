@@ -367,3 +367,16 @@ h1 {
 .confirm-delete-button:hover {
   background: #b94d44;
 }
+
+.edit-button {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #438d68;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.edit-button:hover {
+  color: #267653;
+}
