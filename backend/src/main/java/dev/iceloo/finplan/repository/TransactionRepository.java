@@ -1,7 +1,6 @@
 package dev.iceloo.finplan.repository;
 
 import dev.iceloo.finplan.entity.Transaction;
-import dev.iceloo.finplan.entity.TransactionType;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 

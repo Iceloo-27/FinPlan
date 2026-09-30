@@ -29,11 +29,19 @@ type OperationDraft = {
     transactionDate: string
 }
 
+type CategoryExpense = {
+    categoryId: number | null
+    categoryName: string
+    totalExpense: number
+}
+
 const formatMoney = (amount: number) => new Intl.NumberFormat('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2,}).format(amount) + ' ₽'
 
 function App() {
   const [balance, setBalance] = useState<Balance | null>(null)
   const [periodBalance, setPeriodBalance] = useState<Balance | null>(null)
+  const [categoryExpenses, setCategoryExpenses] = useState<CategoryExpense[]>([])
+  const [analyticsError, setAnalyticsError] = useState('')
   const [error, setError] = useState('')
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [transactionsError, setTransactionsError] = useState('')
@@ -102,6 +110,26 @@ function App() {
         setPeriodBalance(data)
     }
 
+    async function loadCategoryExpenses() {
+        let url = '/api/analytics/expenses-by-category'
+
+        if (periodMode === 'MONTH') {
+            const [year, month] = selectedMonth.split('-')
+            url = `/api/analytics/expenses-by-category/monthly?year=${year}&month=${Number(month)}`
+        }
+
+        const response = await fetch(url)
+
+        if (!response.ok) {
+            throw new Error('Не удалось загрузить аналитику')
+        }
+
+        const data: CategoryExpense[] = await response.json()
+
+        setCategoryExpenses(data)
+        setAnalyticsError('')
+    }
+
     useEffect(() => {
     fetch('/api/balance').then(response => {
           if (!response.ok) {
@@ -132,6 +160,29 @@ function App() {
             }).catch(error => {
                 console.error(error)
             })
+    }, [periodMode, selectedMonth])
+
+    useEffect(() => {
+        let url = '/api/analytics/expenses-by-category'
+
+        if (periodMode === 'MONTH') {
+            const [year, month] = selectedMonth.split('-')
+            url = `/api/analytics/expenses-by-category/monthly?year=${year}&month=${Number(month)}`
+        }
+
+        fetch(url).then(response => {
+            if (!response.ok) {
+                throw new Error('Не удалось загрузить аналитику')
+            }
+
+            return response.json()
+        }).then((data: CategoryExpense[]) => {
+            setCategoryExpenses(data)
+            setAnalyticsError('')
+        }).catch(() => {
+            setCategoryExpenses([])
+            setAnalyticsError('Не удалось загрузить аналитику')
+        })
     }, [periodMode, selectedMonth])
 
     useEffect(() => {
@@ -267,6 +318,7 @@ function App() {
             setBalance(await balanceResponse.json())
             await loadTransactions()
             await loadPeriodBalance()
+            await loadCategoryExpenses()
 
             setAmount('')
             setCategoryId('')
@@ -301,6 +353,8 @@ function App() {
             setBalance(await balanceResponse.json())
             await loadTransactions()
             await loadPeriodBalance()
+            await loadCategoryExpenses()
+
             setTransactionToDelete(null)
         } catch (error) {
             alert(error instanceof Error ? error.message : 'Произошла ошибка при удалении')
@@ -318,6 +372,19 @@ function App() {
         const nextMonth = String(date.getMonth() + 1).padStart(2, '0')
 
         setSelectedMonth(`${nextYear}-${nextMonth}`)
+    }
+
+    const totalCategoryExpenses = categoryExpenses.reduce(
+        (total, category) => total + category.totalExpense,
+        0
+    )
+
+    function getCategoryPercentage(amount: number) {
+        if (totalCategoryExpenses === 0) {
+            return 0
+        }
+
+        return Math.round((amount / totalCategoryExpenses) * 100)
     }
 
   return (
@@ -349,24 +416,83 @@ function App() {
           </section>
 
           <section className="summary">
-            <div className="summary-card">
-              <p>Доходы</p>
-                <span className="summary-period">{periodMode === 'ALL_TIME' ? 'за всё время' : `за ${selectedMonthLabel}`}</span>
-              <h3 className="income">
-                  {periodBalance ? '+' + formatMoney(periodBalance.totalIncome) : 'Загрузка...'}
-              </h3>
-            </div>
-
-            <div className="summary-card">
-              <p>Расходы</p>
-                <span className="summary-period">{periodMode === 'ALL_TIME' ? 'за всё время' : `за ${selectedMonthLabel}`}</span>
-              <h3 className="expense">
-                  {periodBalance ? '−' + formatMoney(periodBalance.totalExpense) : 'Загрузка...'}
-              </h3>
-            </div>
+              <div className="summary-card">
+                <p>Доходы</p>
+                <span className="summary-period">
+                {periodMode === 'ALL_TIME' ? 'за всё время' : `за ${selectedMonthLabel}`}
+                </span>
+                <h3 className="income">
+                    {periodBalance ? '+' + formatMoney(periodBalance.totalIncome) : 'Загрузка...'}
+                </h3>
+              </div>
+              <div className="summary-card">
+                <p>Расходы</p>
+                    <span className="summary-period">
+                        {periodMode === 'ALL_TIME' ? 'за всё время' : `за ${selectedMonthLabel}`}
+                    </span>
+                    <h3 className="expense">
+                        {periodBalance ? '−' + formatMoney(periodBalance.totalExpense) : 'Загрузка...'}
+                    </h3>
+              </div>
           </section>
 
-            <section className="transactions">
+          <section className="analytics-card">
+                <div className="analytics-heading">
+                    <div>
+                        <p className="eyebrow">АНАЛИТИКА</p>
+                        <h2>Расходы по категориям</h2>
+                    </div>
+
+                    <span className="analytics-period">
+                        {periodMode === 'ALL_TIME' ? 'За всё время' : selectedMonthLabel}
+                    </span>
+                </div>
+
+                {analyticsError && (
+                    <p className="expense">{analyticsError}</p>
+                )}
+
+                {!analyticsError && categoryExpenses.length === 0 && (
+                    <p className="analytics-empty">
+                        Расходов за этот период пока нет
+                    </p>
+                )}
+
+                {!analyticsError && categoryExpenses.length > 0 && (
+                    <div className="category-list">
+                        {categoryExpenses.map(category => {
+                            const percentage = getCategoryPercentage(category.totalExpense)
+
+                            return (
+                                <div
+                                    className="category-item"
+                                    key={category.categoryId ?? 'uncategorized'}
+                                >
+                                    <div className="category-info">
+                                        <strong>{category.categoryName}</strong>
+
+                                        <div>
+                                            <span>{formatMoney(category.totalExpense)}</span>
+                                            <span className="category-percentage">
+                                                {percentage}%
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="category-bar">
+                                        <div
+                                            className="category-bar-fill"
+                                            style={{ width: `${percentage}%` }}
+                                        />
+                                        </div>
+                                    </div>
+                            )
+                        })}
+                    </div>
+                )}
+          </section>
+
+          <section className="transactions">
               <div className="section-heading">
                   <h2>Операции</h2>
 

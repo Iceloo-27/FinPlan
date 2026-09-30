@@ -23,6 +23,11 @@ public class CategoryAnalyticsController {
     }
 
     @GetMapping("/expenses-by-category")
+    public List<CategoryExpenseResponse> getAllTimeExpenses() {
+        return categoryAnalyticsService.getAllTimeExpenses();
+    }
+
+    @GetMapping("/expenses-by-category/monthly")
     public List<CategoryExpenseResponse> getMonthlyExpenses(@RequestParam int year, @RequestParam int month) {
         try {
             return categoryAnalyticsService.getMonthlyExpenses(year, month);

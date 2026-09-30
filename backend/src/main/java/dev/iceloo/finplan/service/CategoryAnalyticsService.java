@@ -25,11 +25,22 @@ public class CategoryAnalyticsService {
     }
 
     @Transactional(readOnly = true)
+    public List<CategoryExpenseResponse> getAllTimeExpenses() {
+        List<Transaction> transactions = transactionRepository.findAll();
+
+        return calculateExpensesByCategory(transactions);
+    }
+
+    @Transactional(readOnly = true)
     public List<CategoryExpenseResponse> getMonthlyExpenses(int year, int month) {
         YearMonth yearMonth = YearMonth.of(year, month);
 
         List<Transaction> transactions = transactionRepository.findByTransactionDateBetween(yearMonth.atDay(1), yearMonth.atEndOfMonth(), Sort.unsorted());
 
+        return calculateExpensesByCategory(transactions);
+    }
+
+    private List<CategoryExpenseResponse> calculateExpensesByCategory(List<Transaction> transactions) {
         Map<Long, CategoryExpenseResponse> expensesByCategory = new LinkedHashMap<>();
 
         for (Transaction transaction : transactions) {
@@ -40,7 +51,6 @@ public class CategoryAnalyticsService {
             Category category = transaction.getCategory();
 
             Long categoryId = category == null ? null : category.getId();
-
             String categoryName = category == null ? "Без категории" : category.getName();
 
             CategoryExpenseResponse previous = expensesByCategory.get(categoryId);
