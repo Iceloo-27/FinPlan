@@ -33,6 +33,7 @@ const formatMoney = (amount: number) => new Intl.NumberFormat('ru-RU', {minimumF
 
 function App() {
   const [balance, setBalance] = useState<Balance | null>(null)
+  const [periodBalance, setPeriodBalance] = useState<Balance | null>(null)
   const [error, setError] = useState('')
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [transactionsError, setTransactionsError] = useState('')
@@ -82,7 +83,26 @@ function App() {
         setTransactionsError('')
     }
 
-  useEffect(() => {
+    async function loadPeriodBalance() {
+        let url = '/api/balance'
+
+        if (periodMode === 'MONTH') {
+            const [year, month] = selectedMonth.split('-')
+
+            url = `/api/balance/monthly?year=${year}&month=${Number(month)}`
+        }
+
+        const response = await fetch(url)
+
+        if (!response.ok) {
+            throw new Error('Не удалось загрузить данные за период')
+        }
+
+        const data: Balance = await response.json()
+        setPeriodBalance(data)
+    }
+
+    useEffect(() => {
     fetch('/api/balance').then(response => {
           if (!response.ok) {
             throw new Error('Не удалось загрузить баланс')
@@ -90,7 +110,29 @@ function App() {
 
           return response.json()
         }).then((data: Balance) => setBalance(data)).catch(() => setError('Не удалось подключиться к backend'))
-  }, [])
+    }, [])
+
+    useEffect(() => {
+        let url = '/api/balance'
+
+        if (periodMode === 'MONTH') {
+            const [year, month] = selectedMonth.split('-')
+
+            url = `/api/balance/monthly?year=${year}&month=${Number(month)}`
+        }
+
+        fetch(url).then(response => {
+                if (!response.ok) {
+                    throw new Error('Не удалось загрузить данные за период')
+                }
+
+                return response.json()
+            }).then((data: Balance) => {
+                setPeriodBalance(data)
+            }).catch(error => {
+                console.error(error)
+            })
+    }, [periodMode, selectedMonth])
 
     useEffect(() => {
         let url = '/api/transactions'
@@ -121,7 +163,7 @@ function App() {
             })
     }, [selectedMonth, selectedType, periodMode])
 
-  useEffect(() => {
+    useEffect(() => {
     fetch('/api/categories').then(response => {
           if (!response.ok) {
             throw new Error('Не удалось загрузить категории')
@@ -129,7 +171,7 @@ function App() {
 
           return response.json()
         }).then((data: Category[]) => setCategories(data)).catch(error => console.error(error))
-  }, [])
+    }, [])
 
     function getCurrentDraft(): OperationDraft {
         return {amount, categoryId, description, transactionDate,}
@@ -224,6 +266,7 @@ function App() {
 
             setBalance(await balanceResponse.json())
             await loadTransactions()
+            await loadPeriodBalance()
 
             setAmount('')
             setCategoryId('')
@@ -257,6 +300,7 @@ function App() {
 
             setBalance(await balanceResponse.json())
             await loadTransactions()
+            await loadPeriodBalance()
             setTransactionToDelete(null)
         } catch (error) {
             alert(error instanceof Error ? error.message : 'Произошла ошибка при удалении')
@@ -307,15 +351,17 @@ function App() {
           <section className="summary">
             <div className="summary-card">
               <p>Доходы</p>
+                <span className="summary-period">{periodMode === 'ALL_TIME' ? 'за всё время' : `за ${selectedMonthLabel}`}</span>
               <h3 className="income">
-                {balance ? '+' + formatMoney(balance.totalIncome) : 'Загрузка...'}
+                  {periodBalance ? '+' + formatMoney(periodBalance.totalIncome) : 'Загрузка...'}
               </h3>
             </div>
 
             <div className="summary-card">
               <p>Расходы</p>
+                <span className="summary-period">{periodMode === 'ALL_TIME' ? 'за всё время' : `за ${selectedMonthLabel}`}</span>
               <h3 className="expense">
-                {balance ? '−' + formatMoney(balance.totalExpense) : 'Загрузка...'}
+                  {periodBalance ? '−' + formatMoney(periodBalance.totalExpense) : 'Загрузка...'}
               </h3>
             </div>
           </section>

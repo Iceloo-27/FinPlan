@@ -492,3 +492,10 @@ h1 {
   scrollbar-gutter: stable;
   overscroll-behavior: contain;
 }
+
+.summary-period {
+  display: block;
+  margin-top: 4px;
+  color: #8a9891;
+  font-size: 13px;
+}
